@@ -43,6 +43,11 @@ class Scanner:
 
         for cookie in self.cookies:
             self.session.cookies.set(cookie[0], cookie[1])
+            print(".")
+
+
+        for cookie in self.cookies:
+            self.session.cookies.set(cookie[0], cookie[1])
 
         self.links = []
 
