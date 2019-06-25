@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from learner import Learner
+from src.learner import Learner
 
 
 class PayloadGenerator:

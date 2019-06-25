@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import requests
-import urlparse
+import urllib.parse as urlparse
 import re
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 
-from payload_generator import PayloadGenerator
+from src.payload_generator import PayloadGenerator
 
 
 class Scanner:

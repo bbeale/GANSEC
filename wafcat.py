@@ -29,7 +29,7 @@ def main(args):
 
     scan_data = dict()
 
-    if args is None:
+    if len(args) is 0:
         print(usage)
         sys.exit(-27)
     else:
