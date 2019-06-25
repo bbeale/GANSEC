@@ -76,7 +76,7 @@ def main(args):
             scan_data["ignore"] = args[i_index + 1]
 
     try:
-        vulnscanner = Scanner(scan_data)    # TODO Scanner() init method needs to take in the dictionary object instead of so many individual parameters
+        vulnscanner = Scanner(scan_data)
     except ConnectionError as e:
         print(e.message)
         sys.exit(-1)
