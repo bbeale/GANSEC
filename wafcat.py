@@ -78,7 +78,7 @@ def main(args):
     try:
         vulnscanner = Scanner(scan_data)
     except ConnectionError as e:
-        print(e.message)
+        print(e)
         sys.exit(-1)
     vulnscanner.print_results()
 

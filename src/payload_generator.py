@@ -5,6 +5,7 @@ from src.learner import Learner
 class PayloadGenerator:
 
     def __init__(self):
+        # self.learner = Learner()
         self.attack_payloads = []
 
     def assemble_payload(self, data):

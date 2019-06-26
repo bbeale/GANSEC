@@ -1,10 +1,30 @@
 #!/usr/bin/env python
 import requests
 import urllib.parse as urlparse
-import re
 from bs4 import BeautifulSoup
 
 from src.payload_generator import PayloadGenerator
+
+
+def parse_cookie(cookie_string):
+    if cookie_string is None:
+        raise Exception("Must pass in a cookie string")
+    _cookie = cookie_string.split("=")
+    return _cookie[0].strip(), _cookie[1].strip(),
+
+
+def parse_cookies(cookie_string=None, cookie_list=None):
+    if cookie_string is not None and cookie_list is not None:
+        raise Exception("One or the other: either a list of cookies or a cookie string")
+
+    result = []
+    if cookie_string is not None:
+        result.append(parse_cookie(cookie_string))
+
+    elif cookie_list is not None:
+        for cookie in cookie_list:
+            result.append(parse_cookie(cookie))
+    return result
 
 
 class Scanner:
@@ -21,7 +41,7 @@ class Scanner:
         self.ignore_links   = None
 
         if "cookie" in data.keys():
-            self.cookies = self.parse_cookies(cookie_list=data["cookie"].split(";"))
+            self.cookies = parse_cookies(cookie_list=data["cookie"].split(";"))
 
         if "header" in data.keys():
             self.header = data["header"]
@@ -44,9 +64,6 @@ class Scanner:
         for cookie in self.cookies:
             self.session.cookies.set(cookie[0], cookie[1])
 
-        for cookie in self.cookies:
-            self.session.cookies.set(cookie[0], cookie[1])
-
         self.links = []
 
         _headers = {
@@ -64,41 +81,42 @@ class Scanner:
             _headers[nh[0]] = nh[1]
 
         self.session.headers.update(_headers)
-
         self.crawl(self.url)
+
+        # I think I want to generate payloads before the actual scan but after getting the Urls...
+        # I will need to pass in or reference the payloads,
+        # which I will generate once I have a picture of the attack surface
+        self.pg = PayloadGenerator()
+        self.scan_results = []
         self.scan(self.url)
-
-    def _parse_cookie(self, cookie_string):
-        if cookie_string is None:
-            raise Exception("Must pass in a cookie string")
-        _cookie = cookie_string.split("=")
-        return _cookie[0].strip(), _cookie[1].strip(),
-
-    def parse_cookies(self, cookie_string=None, cookie_list=None):
-        if cookie_string is not None and cookie_list is not None:
-            raise Exception("One or the other: either a list of cookies or a cookie string")
-
-        result = []
-
-        if cookie_string is not None:
-            result.append(self._parse_cookie(cookie_string))
-
-        elif cookie_list is not None:
-
-            for cookie in cookie_list:
-                result.append(self._parse_cookie(cookie))
-
-        return result
 
     def extract_links(self, url):
         response = self.session.get(url)
-        rex = """(?:^href|src=['"])(.*[""'])"""
-        links = re.findall(rex, response.content.decode("utf-8"))
-        return [link.strip('"') for link in links]
+        _links = []
+        html = BeautifulSoup(response.content.decode("utf-8"), features="html.parser")
+
+        elements = html.findAll(lambda tag: len(tag.attrs) > 0 and "href" in tag.attrs)
+
+        for element in elements:
+            _links.append(element.attrs["href"])
+
+        links = []
+        unables = []
+        for link in _links:
+            if url in link:
+                links.append(urlparse.urlparse(link))
+            else:
+                if link and link[0] is "/":
+                    n_url = urlparse.urljoin(url, link)
+                    links.append(urlparse.urlparse(n_url))
+                else:
+                    unables.append(urlparse.urlparse(link))
+
+        return links
 
     def extract_forms(self, url):
         response = self.session.get(url)
-        html = BeautifulSoup(response.content)
+        html = BeautifulSoup(response.content.decode("utf_8"), features="html.parser")
         return html.findAll("form")
 
     def submit(self, form, value, url):
@@ -136,11 +154,13 @@ class Scanner:
         return self.session.post(urlparse.urljoin(self.url, login_url), data=l_data)
 
     def crawl(self, url=None):
+        print('.')
         if url is None:
             url = self.url
 
         links = self.extract_links(url)
         for link in links:
+            print("Crawling link {}".format(link))
             link = urlparse.urljoin(url, str(link))
 
             if "#" in link:
@@ -149,6 +169,7 @@ class Scanner:
             if link not in self.links:
                 self.links.append(link)
                 self.crawl(link)
+        print('...')
 
     def scan(self, url=None):
         if url is None:
@@ -159,12 +180,16 @@ class Scanner:
             for form in forms:
                 print("[+] Testing forms in {}".format(link))
                 if self.form_xss_test(form, url):
-                    print("\n\n[***] XSS found in {} in form {}".format(link, form))
+                    res = "\n\n[***] XSS found in {} in form {}".format(link, form)
+                    self.scan_results.append(res)
+                    print(res)
 
             if "=" in link:
                 print("[+] Testing link: {}".format(link))
                 if self.link_xss_test(url):
-                    print("\n\n[***] XSS found in {}".format(link))
+                    res = "\n\n[***] XSS found in {}".format(link)
+                    self.scan_results.append(res)
+                    print(res)
 
     def link_xss_test(self, url=None, payload=None):
         if url is None:
@@ -173,7 +198,7 @@ class Scanner:
             payload = "<script>alert(\"boo\")</script>"
         url = url.replace("=", "={}".format(payload))
         response = self.session.get(url)
-        return payload in response.content
+        return payload in response.content.decode("utf-8")
 
     def form_xss_test(self, form, url, payload=None):
         if url is None:
@@ -182,7 +207,7 @@ class Scanner:
         if payload is None:
             payload = "<script>alert(\"boo\")</script>"
         response = self.submit(form, payload, url)
-        return payload in response.content
+        return payload in response.content.decode("utf-8")
 
     def print_results(self):
         print("Not yet implemented")
