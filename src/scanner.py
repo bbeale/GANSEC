@@ -201,7 +201,6 @@ class Scanner:
         return self.session.post(urlparse.urljoin(self.target_url, login_url), data=l_data)
 
     def crawl(self, url=None):
-        print('.')
         if url is None:
             url = self.target_url
 
@@ -216,7 +215,6 @@ class Scanner:
                 self.target_links.append(link)
                 print("Crawling link {}".format(link))
                 self.crawl(link)
-        print('...')
 
     def scan(self):
         for link in self.target_links:
