@@ -2,8 +2,11 @@
 import requests
 import urllib.parse as urlparse
 from bs4 import BeautifulSoup
+from selenium import webdriver
+import time
+import os
 
-from src.payload_generator import PayloadGenerator
+from src.payload_generator import main as generator
 
 
 def parse_cookie(cookie_string):
@@ -27,20 +30,43 @@ def parse_cookies(cookie_string=None, cookie_list=None):
     return result
 
 
+def load_payloads_from_file(filepath):
+    payloads = []
+    try:
+        with open(filepath, "r") as pf:
+            payloads = [p for p in pf.readlines() if p not in payloads]
+    except FileExistsError or FileNotFoundError as e:
+        print(e)
+
+    return payloads
+
+
 class Scanner:
     def __init__(self, data):
 
-        self.target_url     = data["url"]
-        self._test_payload  = """<img style="width:100px; height:100px" src="" onmouseover="javascript:alert(document.cookie.toString())" />"""
-        # self._test_payload  = '" onmouseover="javascript:alert(1)" "'
+        self.target_url         = data["url"]
+        # self._test_payload3      = """<img style="width:100px; height:100px" src="" onmouseover="javascript:alert(document.cookie.toString())" />"""
+        # self._test_payload2     = '" onmouseover="javascript:alert(1)" "'
+        self._test_payload1      = "<script>alert(1);</script>"
 
-        self.cookies        = None
-        self.header         = None
-        self.host           = None
-        self.referer        = None
-        self.username       = None
-        self.passwd         = None
-        self.ignore_link    = None
+        executable_path         = os.path.realpath(os.path.join("geckodriver"))
+        self.driver             = webdriver.Firefox(executable_path=executable_path)
+        self.session            = requests.Session()
+
+        self.cookies            = None
+        self.header             = None
+        self.host               = None
+        self.referer            = None
+        self.username           = None
+        self.passwd             = None
+        self.ignore_link        = None
+        self.sleeptime          = None
+
+        self.target_links       = []
+        self.fuzz_payloads      = []
+        self.scan_results       = []
+        self.fuzz_results       = []
+        self.smart_payloads     = []
 
         if "cookie" in data.keys():
             self.cookies = parse_cookies(cookie_list=data["cookie"].split(";"))
@@ -61,13 +87,15 @@ class Scanner:
         if "ignore" in data.keys():
             self.ignore_link = data["ignore"]
 
-        self.session = requests.Session()
+        if "Payloads" in data.keys():
+            self.fuzz_payloads = load_payloads_from_file(data["Payloads"])
+
+        if "sleep" in data.keys():
+            self.sleeptime = data["sleep"]
 
         if self.cookies:
             for cookie in self.cookies:
                 self.session.cookies.set(cookie[0], cookie[1])
-
-        self.target_links = []
 
         _headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0",
@@ -83,14 +111,10 @@ class Scanner:
             _headers[nh[0]] = nh[1]
 
         self.session.headers.update(_headers)
-        self.crawl(self.target_url)
 
-        # I think I want to generate payloads before the actual scan but after getting the Urls...
-        # I will need to pass in or reference the payloads,
-        # which I will generate once I have a picture of the attack surface
-        self.pg = PayloadGenerator()
-        self.scan_results = []
-        self.scan()
+    def generate_smart_payloads(self):
+        # I will probably have better luck if I train the model on a proper data science machine with a GPU if I want to run the generator right here in the future
+        self.smart_payloads = generator()
 
     def extract_links(self, url):
         response = self.session.get(url)
@@ -216,40 +240,77 @@ class Scanner:
                 print("Crawling link {}".format(link))
                 self.crawl(link)
 
-    def scan(self):
+    def scan(self, url=None):
+        if len(self.target_links) is 0 and url is not None:
+            self.target_links.append(url)
+
         for link in self.target_links:
             forms = self.extract_forms(link)
             for form in forms:
                 print("[+] Testing forms in {}".format(link))
-                if self.form_xss_test(form, link):
-                    res = "\n\n[***] XSS found in {} in form {}".format(link, form)
-                    self.scan_results.append(res)
+                resp = self.form_xss_test(form, link)
+
+                if resp["reflected"]:
+                    res = "\n\n[***] XSS found in {} in form {}".format(link, form.name)
                     print(res)
+                    self.scan_results.append(resp)
 
             if "=" in link:
                 print("[+] Testing link: {}".format(link))
-                if self.link_xss_test(link):
+                resp = self.link_xss_test(link)
+
+                if resp["reflected"]:
                     res = "\n\n[***] XSS found in {}".format(link)
                     self.scan_results.append(res)
                     print(res)
+                    self.fuzz_results.append(resp)
+
+                    if self.sleeptime is not None:
+                        time.sleep(self.sleeptime)
 
     def link_xss_test(self, url=None, payload=None):
         if url is None:
             url = self.target_url
         if payload is None:
-            payload = self._test_payload
+            payload = self._test_payload1
         url = url.replace("=", "={}".format(payload))
+        reflected = False
         response = self.session.get(url)
-        return payload in response.text
+        if payload in response.text:
+            reflected = True
+        return dict(
+            response_text=response.text,
+            reflected=reflected,
+            status=response.status_code
+        )
 
     def form_xss_test(self, form, url, payload=None):
         if url is None:
             url = self.target_url
-        # todo: I think I am going to want to parse the form inputs here instead, so I can test them one at a time
+
         if payload is None:
-            payload = self._test_payload
+            payload = self._test_payload1
+
+        reflected = False
         response = self.submit(form, payload, url)
-        return payload in response.text
+        if payload in response.text:
+            reflected = True
+        return dict(
+            response_text=response.text,
+            reflected=reflected,
+            status=response.status_code
+        )
 
     def print_results(self):
-        print("Not yet implemented")
+        if len(self.scan_results) is 0 and len(self.fuzz_results) is 0:
+            print("No XSS vulnerabilities found")
+        elif len(self.scan_results) > 0:
+            print("Scan results:\n\n")
+            for res in self.scan_results:
+                print(res)
+            print("\tdone!")
+        elif len(self.fuzz_results) > 0:
+            print("Fuzz results:\n\n")
+            for res in self.fuzz_results:
+                print(res)
+        print("\tdone")
