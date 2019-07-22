@@ -150,15 +150,15 @@ class GeneSequencer:
         genomes.append(Gene(progeny_second, 0))
         return genomes
 
-    def propogate_next(self, genes, elite_genes, ga_progeny):
-        next_generation_geno = sorted(genes, reverse=False, key=lambda u: u.selection_status)
-        for _ in range(0, len(elite_genes) + len(ga_progeny)):
-            if len(next_generation_geno) > 0:
-                next_generation_geno.pop()
+    def propogate(self, genes, elite_genes, offspring_genes):
+        next_gen = sorted(genes, reverse=False, key=lambda u: u.selection_status)
+        for _ in range(0, len(elite_genes) + len(offspring_genes)):
+            if len(next_gen) > 0:
+                next_gen.pop()
 
-        next_generation_geno.extend(elite_genes)
-        next_generation_geno.extend(ga_progeny)
-        return next_generation_geno
+        next_gen.extend(elite_genes)
+        next_gen.extend(offspring_genes)
+        return next_gen
 
     def mutate(self, components, gene_pool):
 
@@ -212,7 +212,7 @@ class GeneSequencer:
             for i in range(0, self.select_genome):
                 progeny_gene.extend(self.crossover(elite_genes[i - 1], elite_genes[i]))
 
-            next_generation_individual_group = self.propogate_next(
+            next_generation_individual_group = self.propogate(
                 current_generation, elite_genes, progeny_gene)
 
             next_generation_individual_group = self.mutate(next_generation_individual_group, gene_pool)

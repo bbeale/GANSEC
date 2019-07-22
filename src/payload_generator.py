@@ -30,7 +30,7 @@ def main():
     driver.set_window_size(window_width, window_height)
     driver.set_window_position(position_width, position_height)
 
-    for idx in range(max_try_num):
+    for i in range(max_try_num):
         sequencer = GeneSequencer(template, driver)
         individual_list = sequencer.genetic_algorithm()
 

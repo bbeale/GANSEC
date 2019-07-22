@@ -53,13 +53,6 @@ class PayloadDiscriminator:
         self.template = html_template
         self.web_driver = wd
 
-        full_path = os.path.dirname(os.path.abspath(__file__))
-
-        self.result_dir = os.path.realpath(os.path.join(full_path, "result"))
-        self.eval_html_path = os.path.realpath(os.path.join("html", "ga_eval_html_*.html"))
-        self.gene_dir = os.path.realpath(os.path.join(full_path, "gene"))
-        self.genes_path = os.path.realpath(os.path.join(self.gene_dir, "gene_list.csv"))
-        self.ga_result_file = "ga_result_*.csv"
         self.genome_length = 5
         self.input_size = 200
         self.batch_size = 32
@@ -67,6 +60,13 @@ class PayloadDiscriminator:
         self.max_sig_num = 10
         self.max_explore_codes_num = 1000  # 00
         self.max_synthetic_num = 1000
+
+        full_path = os.path.dirname(os.path.abspath(__file__))
+        self.result_dir = os.path.realpath(os.path.join(full_path, "result"))
+        self.eval_html_path = os.path.realpath(os.path.join("html", "ga_eval_html_*.html"))
+        self.gene_dir = os.path.realpath(os.path.join(full_path, "gene"))
+        self.genes_path = os.path.realpath(os.path.join(self.gene_dir, "gene_list.csv"))
+        self.ga_result_file = "ga_result_*.csv"
         self.weight_dir = os.path.realpath(os.path.join(full_path, "weight"))
         self.gen_weight_file = "generator_*.h5"
         self.dis_weight_file = "discriminator_*.h5"
@@ -286,20 +286,3 @@ class PayloadDiscriminator:
                     gan_save_path, mode="w", header=True, index=False)
             else:
                 pd.DataFrame(naughty_scripts).to_csv(gan_save_path, mode="a", header=False, index=False)
-
-
-# %%
-# html_dir = os.path.realpath("html")
-# html_template = "eval_template.html"
-# env = Environment(loader=FileSystemLoader(html_dir))
-# template = env.get_template(html_template)
-# %%0
-# executable_path=os.path.realpath(os.path.join("geckodriver"))
-# options = Options()
-# options.headless = True
-# driver = webdriver.Firefox(executable_path=executable_path, options=options)
-# %%
-# generator = GeneticAlgorithm(template, driver)
-# %%
-# generator.main()
-# %%
