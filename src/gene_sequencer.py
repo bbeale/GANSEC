@@ -100,10 +100,10 @@ class GeneSequencer:
             genes.append(random.randint(0, len(gene.index) - 1))
         return Gene(genes, 0)
 
-    def natural_selection(self, generation, gene, eval_place, individual_idx):
+    def natural_selection(self, generation, gene, eval_place, individual_i):
         indiv = gene_to_str(gene, generation.genomes)
         html = self.template.render({eval_place: indiv})
-        eval_html_path = os.path.realpath(os.path.join(self.html_dir, self.html_file.replace("*", str(individual_idx))))
+        eval_html_path = os.path.realpath(os.path.join(self.html_dir, self.html_file.replace("*", str(individual_i))))
 
         with open(eval_html_path, "w", encoding="utf-8") as _html:
             _html.write(html)
@@ -192,13 +192,13 @@ class GeneSequencer:
             
         elite_genes = []
         for int_count in range(1, self.max_generation + 1):
-            for indiv, idx in enumerate(range(self.max_genomes)):
+            for indiv, i in enumerate(range(self.max_genomes)):
 
                 selection_result, status = self.natural_selection(
-                    current_generation[indiv], gene_pool, eval_place, idx
+                    current_generation[indiv], gene_pool, eval_place, i
                 )
 
-                idx += 1
+                i += 1
                 if status == 1:
                     indiv -= 1
                     continue
