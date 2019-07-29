@@ -23,3 +23,11 @@ I will likely need to go in a different direction regarding WHEN I want the payl
 For different types of injection attacks, including the XSS which I have used in this project, I plan to experiment 
 with different hyperparameters, optimizers, and activation functions.
 
+#Environment setup
+Dependencies: Vagrant, Virtualbox
+
+Install requirements
+`pip install -r requirements.txt`
+
+Populate gene list `python populate_genes.py`
+
