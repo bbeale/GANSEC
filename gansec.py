@@ -1,8 +1,10 @@
 #!/usr/bin/env python
-from src.scanner import Scanner
+# -*- coding: utf-8 -*-
 from requests.exceptions import ConnectionError
 from argparse import ArgumentParser
-import sys, os
+from src.Scanner import Scanner
+import sys
+import os
 
 
 usage = """
@@ -151,5 +153,4 @@ def main(args):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-    print(".")
-
+    print("[-] Done")

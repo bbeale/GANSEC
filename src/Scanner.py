@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-import requests
+from src.PayloadGenerator import generate
 import urllib.parse as urlparse
-from bs4 import BeautifulSoup
 from selenium import webdriver
+from bs4 import BeautifulSoup
+import requests
 import time
 import os
-
-from src.payload_generator import main as generator
 
 
 def parse_cookie(cookie_string):
@@ -117,7 +116,7 @@ class Scanner:
 
     def generate_smart_payloads(self):
         # I will probably have better luck if I train the model on a proper data science machine with a GPU if I want to run the generator right here in the future
-        self.smart_payloads = generator()
+        self.smart_payloads = generate()
 
     def extract_links(self, url):
         if not url or url is None:

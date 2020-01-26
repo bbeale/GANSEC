@@ -3,12 +3,12 @@
 import os
 from selenium import webdriver
 from jinja2 import Environment, FileSystemLoader
-from src.gene_sequencer import GeneSequencer
-from src.payload_discriminator import PayloadDiscriminator
+from src.GeneSequencer import GeneSequencer
+from src.PayloadDiscriminator import PayloadDiscriminator
 from selenium.webdriver.firefox.options import Options
 
 
-def main():
+def generate():
     print("Starting payload generation now... Please be patient.")
 
     html_dir = "html"
@@ -45,4 +45,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    generate()
