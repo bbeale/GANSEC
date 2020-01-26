@@ -6,7 +6,7 @@ import sys, os
 
 
 usage = """
-    python wafcat.py --url <url> (--fuzz | --crawl | --scan) [args]
+    python gansec.py --url <url> (--fuzz | --crawl | --scan) [args]
 """
 
 
