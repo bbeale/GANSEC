@@ -6,6 +6,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from tidylib import tidy_fragment
 from decimal import Decimal
+from src.SeleniumValidator import SeleniumValidator
 from src.Gene import Gene
 import pandas as pd
 import random
@@ -33,38 +34,6 @@ def gene_to_str(gene, genes):
         indiv = indiv.replace("%s", " ").replace("&quot;", """) \
             .replace("%comma", ",").replace("&apos;", """)
     return indiv
-
-
-def test_payload_with_selenium(web_driver, html_path):
-    """Load the HTML in a Selenium browser to see if the script executes.
-
-    :param web_driver:
-    :param html_path:
-    :return:
-    """
-    if not web_driver or web_driver is None:
-        raise GeneValidationException("[!] WebDriver reference required")
-
-    if not html_path or html_path is None or not os.path.exists(html_path):
-        raise GeneValidationException("[!] HTML path invalid or does not exist")
-
-    result = dict()
-    result["score"] = 0
-    result["error"] = False
-
-    # Refresh browser for next run
-    try:
-        web_driver.get(html_path)
-        WebDriverWait(web_driver, 5).until(EC.presence_of_element_located((By.NAME, "testview")))
-    except UnexpectedAlertPresentException as e:
-        print("Alert!\ne:", e)
-        result["score"] += 1
-
-    except WebDriverException as e:
-        print("Error\ne:", e)
-        result["error"] = True
-
-    return result
 
 
 class GeneSequencer:
@@ -141,6 +110,7 @@ class GeneSequencer:
         if not individual_i or individual_i is None:
             raise SequencerValidationException("[!] individual_i is required.")
 
+        sv = SeleniumValidator()
         indiv = gene_to_str(gene, generation.genomes)
         html = self.template.render({eval_place: indiv})
         eval_html_path = os.path.realpath(os.path.join(self.html_dir, self.html_file.replace("*", str(individual_i))))
@@ -161,7 +131,8 @@ class GeneSequencer:
             return None, 1
 
         int_score = warnings + errors
-        result = test_payload_with_selenium(self.web_driver, str("file://" + eval_html_path))
+        # result = test_payload_with_selenium(self.web_driver, str("file://" + eval_html_path))
+        result = sv.validate_payload((self.web_driver, str("file://" + eval_html_path)))
         selenium_score = result["score"]
         if result["error"]:
             return None, 1
