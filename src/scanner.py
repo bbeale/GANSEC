@@ -44,6 +44,9 @@ def load_payloads_from_file(filepath):
 class Scanner:
     def __init__(self, data):
 
+        if data is None:
+            raise ScannerValidationException("[!] data argument required")
+
         self.target_url         = data["url"]
         # self._test_payload3      = """<img style="width:100px; height:100px" src="" onmouseover="javascript:alert(document.cookie.toString())" />"""
         # self._test_payload2     = '" onmouseover="javascript:alert(1)" "'
@@ -117,6 +120,9 @@ class Scanner:
         self.smart_payloads = generator()
 
     def extract_links(self, url):
+        if not url or url is None:
+            raise ScannerValidationException("[!] a url is required")
+
         response = self.session.get(url)
         _links = []
         html = BeautifulSoup(response.text, features="html.parser")
@@ -178,11 +184,23 @@ class Scanner:
         return links
 
     def extract_forms(self, url):
+        if not url or url is None:
+            raise ScannerValidationException("[!] a url is required")
+
         response = self.session.get(url)
         html = BeautifulSoup(response.text, features="html.parser")
         return html.findAll("form")
 
     def submit(self, form, value, url):
+        if not form or form is None:
+            raise ScannerValidationException("[!] a form is required")
+
+        if value is None:
+            raise ScannerValidationException("[!] a value is required")
+
+        if not url or url is None:
+            raise ScannerValidationException("[!] a url is required")
+
         action = form.get("action")
         p_url = urlparse.urljoin(url, action)
         method = form.get("method")
@@ -214,6 +232,15 @@ class Scanner:
         return response
 
     def login(self, uname, pword, login_url=None):
+
+        if not uname or uname is None:
+            raise ScannerValidationException("[!] uname is required")
+
+        if not pword or pword is None:
+            raise ScannerValidationException("[!] pword is required")
+
+        if not login_url or login_url is None:
+            raise ScannerValidationException("[!] login_url is required")
 
         l_data = dict(
             username=uname,
@@ -268,11 +295,13 @@ class Scanner:
                     if self.sleeptime is not None:
                         time.sleep(self.sleeptime)
 
-    def link_xss_test(self, url=None, payload=None):
-        if url is None:
-            url = self.target_url
-        if payload is None:
-            payload = self._test_payload1
+    def link_xss_test(self, url, payload):
+        if not url or url is None:
+            raise ScannerValidationException("[!] a url is required to scan")
+
+        if not payload or payload is None:
+            raise ScannerValidationException("[!] a payload is required for the scanner to scan")
+
         url = url.replace("=", "={}".format(payload))
         reflected = False
         response = self.session.get(url)
@@ -284,12 +313,16 @@ class Scanner:
             status=response.status_code
         )
 
-    def form_xss_test(self, form, url, payload=None):
-        if url is None:
-            url = self.target_url
+    def form_xss_test(self, form, url, payload):
+        if not form or form is None:
+            raise ScannerValidationException("[!] a form is required")
 
-        if payload is None:
-            payload = self._test_payload1
+        if not url or url is None:
+            raise ScannerValidationException("[!] a url is required to scan")
+
+        if not payload or payload is None:
+            raise ScannerValidationException("[!] a payload is required for the scanner to scan")
+
 
         reflected = False
         response = self.submit(form, payload, url)
@@ -314,3 +347,11 @@ class Scanner:
             for res in self.fuzz_results:
                 print(res)
         print("\tdone")
+
+
+class ScannerException(Exception):
+    pass
+
+
+class ScannerValidationException(ScannerException):
+    pass

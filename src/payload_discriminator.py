@@ -20,6 +20,18 @@ K.set_image_dim_ordering("th")
 
 
 def gene_to_str(gene, genes):
+    """Convert a gene object to a string.
+
+    :param gene:
+    :param genes:
+    :return:
+    """
+    if not gene or gene is None:
+        raise GeneValidationException("[!] Invalid gene")
+
+    if not genes or genes is None:
+        raise GeneValidationException("[!] Invalid genes")
+
     indiv = ""
     for gene_num in genes:
         indiv += str(gene.loc[gene_num].values[0])
@@ -29,10 +41,23 @@ def gene_to_str(gene, genes):
 
 
 def test_payload_with_selenium(web_driver, html_path):
+    """Load the HTML in a Selenium browser to see if the script executes.
+
+    :param web_driver:
+    :param html_path:
+    :return:
+    """
+    if not web_driver or web_driver is None:
+        raise GeneValidationException("[!] WebDriver reference required")
+
+    if not html_path or html_path is None or not os.path.exists(html_path):
+        raise GeneValidationException("[!] HTML path invalid or does not exist")
+
     result = dict()
     result["score"] = 0
     result["error"] = False
 
+    # Refresh browser for next run
     try:
         web_driver.get(html_path)
         WebDriverWait(web_driver, 5).until(EC.presence_of_element_located((By.NAME, "testview")))
@@ -41,15 +66,23 @@ def test_payload_with_selenium(web_driver, html_path):
         result["score"] += 1
 
     except WebDriverException as e:
-        print("Error!\ne:", e)
+        print("Error\ne:", e)
         result["error"] = True
 
     return result
 
 
 class PayloadDiscriminator:
+    """
+    This class tries to determine if the generated payload meets our criteria or not.
+    """
     def __init__(self, html_template, wd):
-        
+        if not html_template or html_template is None:
+            raise DiscriminatorValidatorException("[!] Argument html_template not valid")
+
+        if not wd or wd is None:
+            raise DiscriminatorValidatorException("[!] WebDriver instance required.")
+
         self.template = html_template
         self.web_driver = wd
 
@@ -81,6 +114,10 @@ class PayloadDiscriminator:
             os.path.join(self.weight_dir, self.gen_weight_file.replace("*", str(self.num_epoch - 1))))
 
     def generator_model(self):
+        """Construct the discriminator model.
+
+        :return:
+        """
         model = Sequential()
         model.add(Dense(input_dim=self.input_size, output_dim=self.input_size * 10, init="glorot_uniform"))
         model.add(LeakyReLU(0.2))
@@ -96,6 +133,10 @@ class PayloadDiscriminator:
         return model
 
     def discriminator_model(self):
+        """Construct the discriminator model.
+
+        :return:
+        """
         model = Sequential()
         model.add(Dense(input_dim=self.genome_length, output_dim=self.genome_length * 10, init="glorot_uniform"))
         model.add(LeakyReLU(0.2))
@@ -106,6 +147,14 @@ class PayloadDiscriminator:
         return model
 
     def train(self, list_sigs):
+        """Train the model.
+
+        :param list_sigs:
+        :return:
+        """
+        if not list_sigs or list_sigs is None:
+            raise DiscriminatorValidatorException("[!] list_sigs is required")
+
         X_train = []
         X_train = np.array(list_sigs)
         X_train = (X_train.astype(np.float32) - self.flt_size) / self.flt_size
@@ -171,6 +220,14 @@ class PayloadDiscriminator:
         return naughty_scripts
 
     def code_to_gene(self, generated_code):
+        """Convert a generated code to a gene sequence.
+
+        :param generated_code:
+        :return:
+        """
+        if not generated_code or generated_code is None:
+            raise DiscriminatorValidatorException("[!] generated_code required")
+
         genes = []
         for gene_num in generated_code:
             gene_num = (gene_num * self.flt_size) + self.flt_size
@@ -181,9 +238,21 @@ class PayloadDiscriminator:
         return genes
 
     def vector_mean(self, vector1, vector2):
+        """Calculate the mean of two vectors.
+
+        :param vector1:
+        :param vector2:
+        :return:
+        """
+        if vector1 is None or vector2 is None:
+            raise DiscriminatorValidatorException("[!] Vectors cannot be none if you want the mean")
         return (vector1 + vector2) / 2
 
     def gan(self):
+        """Run the GAN.
+
+        :return:
+        """
         gan_save_path = os.path.realpath(os.path.join(self.result_dir, self.gan_result_file.replace("*", self.web_driver.name)))
         vec_save_path = os.path.realpath(os.path.join(self.result_dir, self.gan_vec_result_file.replace("*", self.web_driver.name)))
 
@@ -286,3 +355,11 @@ class PayloadDiscriminator:
                     gan_save_path, mode="w", header=True, index=False)
             else:
                 pd.DataFrame(naughty_scripts).to_csv(gan_save_path, mode="a", header=False, index=False)
+
+
+class DiscriminatorException(Exception):
+    pass
+
+
+class DiscriminatorValidatorException(DiscriminatorException):
+    pass

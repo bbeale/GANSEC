@@ -14,6 +14,18 @@ from tidylib import tidy_fragment
 
 
 def gene_to_str(gene, genes):
+    """Convert a gene object to a string.
+
+    :param gene:
+    :param genes:
+    :return:
+    """
+    if not gene or gene is None:
+        raise GeneValidationException("[!] Invalid gene")
+
+    if not genes or genes is None:
+        raise GeneValidationException("[!] Invalid genes")
+
     indiv = ""
     for gene_num in genes:
         indiv += str(gene.loc[gene_num].values[0])
@@ -23,6 +35,18 @@ def gene_to_str(gene, genes):
 
 
 def test_payload_with_selenium(web_driver, html_path):
+    """Load the HTML in a Selenium browser to see if the script executes.
+
+    :param web_driver:
+    :param html_path:
+    :return:
+    """
+    if not web_driver or web_driver is None:
+        raise GeneValidationException("[!] WebDriver reference required")
+
+    if not html_path or html_path is None or not os.path.exists(html_path):
+        raise GeneValidationException("[!] HTML path invalid or does not exist")
+
     result = dict()
     result["score"] = 0
     result["error"] = False
@@ -43,6 +67,9 @@ def test_payload_with_selenium(web_driver, html_path):
 
 
 class Gene:
+    """
+    An individual component in a genome to get passed around during mutation / replicative processes. Much like how genes work in living organisms.
+    """
     genomes = None
     selection_status = None
 
@@ -57,15 +84,37 @@ class Gene:
         return self.selection_status
 
     def set_genom(self, genomes):
+        """
+        :param genomes:
+        :return:
+        """
+        if not genomes or genomes is None:
+            raise GeneValidationException("[!] Genomes are required")
+
         self.genomes = genomes
 
     def set_selection_status(self, status):
+        """
+        :param status:
+        :return:
+        """
+        if not status or status is None:
+            raise GeneValidationException("[!] Genomes are required")
         self.selection_status = status
 
 
 # The Genetic Algorithm
 class GeneSequencer:
+    """
+    This class does the work of running the genetic mutation and selection processes to determine the payloads that meet the fitness criteria.
+    """
     def __init__(self, html_template, wd):
+
+        if not html_template or html_template is None:
+            raise SequencerValidationException("[!] Argument html_template not valid")
+
+        if not wd or wd is None:
+            raise SequencerValidationException("[!] WebDriver instance required.")
         
         self.template = html_template
         self.web_driver = wd
@@ -95,12 +144,40 @@ class GeneSequencer:
         self.result_list = []
 
     def create_genome(self, gene):
+        """Return a gene object to represent an individual part of a genome.
+
+        :param gene:
+        :return:
+        """
+        if not gene or gene is None:
+            raise SequencerValidationException("[!] gene is required.")
+
         genes = []
         for _ in range(self.genome_length):
             genes.append(random.randint(0, len(gene.index) - 1))
         return Gene(genes, 0)
 
     def natural_selection(self, generation, gene, eval_place, individual_i):
+        """I don't have to be the be the fittest and fastest to survive -- I just have to be fitter and faster than YOU!
+
+        :param generation:
+        :param gene:
+        :param eval_place:
+        :param individual_i:
+        :return:
+        """
+        if not generation or generation is None:
+            raise SequencerValidationException("[!] generation is required.")
+
+        if not gene or gene is None:
+            raise SequencerValidationException("[!] gene is required.")
+
+        if not eval_place or eval_place is None:
+            raise SequencerValidationException("[!] eval_place is required.")
+
+        if not individual_i or individual_i is None:
+            raise SequencerValidationException("[!] individual_i is required.")
+
         indiv = gene_to_str(gene, generation.genomes)
         html = self.template.render({eval_place: indiv})
         eval_html_path = os.path.realpath(os.path.join(self.html_dir, self.html_file.replace("*", str(individual_i))))
@@ -134,11 +211,31 @@ class GeneSequencer:
         return int_score, 0
 
     def get_elites(self, generation):
+        """Select the winners of the genetic selection process.
+
+        :param generation:
+        :return:
+        """
+        if not generation or generation is None:
+            raise SequencerValidationException("[!] generation is required")
+
         sort_result = sorted(generation, reverse=True, key=lambda u: u.selection_status)
 
         return [sort_result.pop(0) for _ in range(self.select_genome)]
 
     def crossover(self, first_sequence, second_sequence):
+        """Cross random genes between two sequences.
+
+        :param first_sequence:
+        :param second_sequence:
+        :return:
+        """
+        if not first_sequence or first_sequence is None:
+            raise SequencerValidationException("[!] first_sequence is required for genetic mutation")
+
+        if not second_sequence or second_sequence is None:
+            raise SequencerValidationException("[!] second_sequence is required for genetic mutation")
+
         genomes = []
         cross_first = random.randint(0, self.genome_length)
         cross_second = random.randint(cross_first, self.genome_length)
@@ -151,6 +248,15 @@ class GeneSequencer:
         return genomes
 
     def propogate(self, genes, elite_genes, offspring_genes):
+        if not genes or genes is None:
+            raise SequencerValidationException("[!] genes required.")
+
+        if not elite_genes or elite_genes is None:
+            raise SequencerValidationException("[!] elite_genes required.")
+
+        if not offspring_genes or offspring_genes is None:
+            raise SequencerValidationException("[!] offspring_genes required.")
+
         next_gen = sorted(genes, reverse=False, key=lambda u: u.selection_status)
         for _ in range(0, len(elite_genes) + len(offspring_genes)):
             if len(next_gen) > 0:
@@ -161,6 +267,11 @@ class GeneSequencer:
         return next_gen
 
     def mutate(self, components, gene_pool):
+        if not components or components is None:
+            raise SequencerValidationException("[!] components require for mutationd")
+
+        if not gene_pool or gene_pool is None:
+            raise SequencerValidationException('[!] gene_pool required for mutation')
 
         mutation = []
         for component in components:
@@ -178,6 +289,10 @@ class GeneSequencer:
         return mutation
 
     def genetic_algorithm(self):
+        """Run the genetic algorithm to populate the payloads.
+
+        :return:
+        """
         gene_pool = pd.read_csv(self.genes_path, encoding="utf-8").fillna("")
 
         save_path = os.path.realpath(os.path.join(self.result_dir, self.result_file.replace("*", self.web_driver.name)))
@@ -232,3 +347,19 @@ class GeneSequencer:
         print("[+] Best individual : \"{}\"".format(contender))
 
         return self.result_list
+
+
+class GeneException(Exception):
+    pass
+
+
+class GeneValidationException(GeneException):
+    pass
+
+
+class SequencerException(Exception):
+    pass
+
+
+class SequencerValidationException(SequencerException):
+    pass
