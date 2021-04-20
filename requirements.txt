@@ -24,7 +24,7 @@ python-dateutil==2.8.0
 python-owasp-zap-v2.4==0.0.15
 pytidylib==0.3.2
 pytz==2019.1
-PyYAML==5.1.1
+PyYAML==5.4
 requests==2.22.0
 robobrowser==0.5.3
 scipy==1.3.0
